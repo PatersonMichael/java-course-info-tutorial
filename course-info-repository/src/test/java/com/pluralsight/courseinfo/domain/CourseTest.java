@@ -13,7 +13,13 @@ class CourseTest {
     @Test
     void rejectNullComponents() {
         assertThrows(IllegalArgumentException.class, () ->
-            new Course(null, null, 1,null));
+            new Course(null, null, 1,null, Optional.empty()));
+    }
+
+    @Test
+    void rejectBlankNotes() {
+        assertThrows(IllegalArgumentException.class, () ->
+                new Course("1", "Title", 1, "url", Optional.of("")));
     }
 
 

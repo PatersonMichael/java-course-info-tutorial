@@ -8,14 +8,20 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+
 class CourseJdbcRepository implements CourseRepository{
     private static final String H2_DATABASE_URL =
             "jdbc:h2:file:%s;AUTO_SERVER=TRUE;INIT=RUNSCRIPT FROM './db_init.sql'";
 
     private static final String INSERT_COURSE = """
-        MERGE INTO Courses (id, name, length, url)
-        VALUES (?, ?, ?, ?)
-       """;
+            MERGE INTO Courses (id, name, length, url)
+            VALUES (?, ?, ?, ?)
+           """;
+    private static final String ADD_NOTES = """
+            UPDATE Courses SET notes = ?
+              WHERE id = ?
+            """;
 
     private final DataSource dataSource;
 
@@ -24,6 +30,8 @@ class CourseJdbcRepository implements CourseRepository{
         jdbcDataSource.setURL(H2_DATABASE_URL.formatted(databaseFile));
         this.dataSource = jdbcDataSource;
     }
+
+    // Takes a course and adds it to the database
     @Override
     public void saveCourse(Course course) {
         try (Connection connection = dataSource.getConnection()) {
@@ -46,15 +54,29 @@ class CourseJdbcRepository implements CourseRepository{
 
             List<Course> courses = new ArrayList<>();
             while (resultSet.next()) {
+                // for each course that comes in from the query, create a course and add it to the list of courses to be returned
                 Course course = new Course(resultSet.getString(1),
                         resultSet.getString(2),
                         resultSet.getLong(3),
-                        resultSet.getString(4));
+                        resultSet.getString(4),
+                        Optional.ofNullable(resultSet.getString(5)));
                 courses.add(course);
             }
             return Collections.unmodifiableList(courses);
         } catch (SQLException e) {
             throw new RepositoryException("Failed to retrieve resources", e);
+        }
+    }
+
+    @Override
+    public void addNotes(String id, String notes) {
+        try (Connection connection = dataSource.getConnection()) {
+            PreparedStatement statement = connection.prepareStatement(ADD_NOTES);
+            statement.setString(1, notes);
+            statement.setString(2, id);
+            statement.execute();
+        } catch (SQLException e) {
+            throw new RepositoryException("Failed to add notes to " + id, e);
         }
     }
 }
