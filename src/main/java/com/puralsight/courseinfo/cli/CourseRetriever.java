@@ -1,23 +1,39 @@
 package com.puralsight.courseinfo.cli;
 
+import com.puralsight.courseinfo.cli.service.CourseRetrievalService;
+import com.puralsight.courseinfo.cli.service.PluralsightCourse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.util.List;
+
+import static java.util.function.Predicate.not;
+
 public class CourseRetriever {
+    private static final Logger LOG = LoggerFactory.getLogger(CourseRetriever.class);
 
     public static void main(String... args) {
-        System.out.println("CourseRetriever Started!");
+        LOG.info("CourseRetriever Starting");
         if (args.length == 0) {
-            System.out.println("Please provide an author name as first argument.");
+            LOG.warn("Please provide an author name as first argument.");
             return;
         }
 
         try {
             retrieveCourses(args[0]);
         } catch (Exception e) {
-            System.out.println("Unexpected Error");
-            e.printStackTrace();
+            LOG.error("Unexpected Error", e);
         }
     }
 
     private static void retrieveCourses(String authorId) {
-        System.out.println("Revrieving courses for author " + authorId);
+        LOG.info("Retrieving courses for author '{}'", authorId);
+        CourseRetrievalService courseRetrievalService = new CourseRetrievalService();
+
+        List<PluralsightCourse> coursesToStore = courseRetrievalService.getCoursesFor(authorId)
+                .stream()
+                .filter(not(PluralsightCourse::isRetired))
+                .toList();
+        LOG.info("Retrieved the following {} courses: {}", coursesToStore.size(), coursesToStore);
     }
 }
